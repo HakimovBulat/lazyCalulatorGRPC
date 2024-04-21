@@ -24,25 +24,31 @@
                   </ul>
                 </header>
               </div>
-            <h4>Время выполнения в секундах</h4>
+            {{if eq .User ""}}
+            <h2 class="col-lg-6 mx-auto mb-4"> Необходимо зарегистрироваться для ввода и просмотра данных</p>
+            {{else}}
+            <h1 class="col-lg-6 mx-auto mb-4">Время выполнения в секундах</h4>
             <div>
-              <label>Сложение:</label> <br>
-              <input type="number" name="addition" value={{.addition}} min="1">
+              <p class="col-lg-6 mx-auto mb-4"> <label>Сложение:</label> </p>
+              <p class="col-lg-6 mx-auto mb-4"> <input type="number" name="addition" value={{.addition}} min="1"> </p>
             </div> <br><br>
             <div class="form-group">
-                <label>Умножение: </label> <br>
-                <input type="number" name="multiplication" value={{.multiplication}} min="1">
+                <p class="col-lg-6 mx-auto mb-4"><label>Умножение: </label> </p>
+                <p class="col-lg-6 mx-auto mb-4"><input type="number" name="multiplication" value={{.multiplication}} min="1"> </p>
             </div> <br><br>
             <div class="form-group">
-                <label>Вычитание: </label> <br>
-                <input type="number" name="substraction" value={{.substraction}} min="1">
+                <p class="col-lg-6 mx-auto mb-4"><label>Вычитание: </label> </p>
+                <p class="col-lg-6 mx-auto mb-4"><input type="number" name="substraction" value={{.substraction}} min="1"> </p>
             </div> <br><br>
             <div class="form-group">
-                <label>Деление: </label> <br>
-                <input type="number" name="division" value={{.division}} min="1">
+                <p class="col-lg-6 mx-auto mb-4"><label>Деление: </label> </p>
+                <p class="col-lg-6 mx-auto mb-4"><input type="number" name="division" value={{.division}} min="1"> </p>
             </div> <br><br>
-            <button class="btn btn-info" >Готово</button>
-            <button class="btn btn-danger" hx-get="/static_operators">Отменить</button>
+            <p class="col-lg-6 mx-auto mb-4">
+              <button class="btn btn-success" >Готово</button>
+              <button class="btn btn-danger" hx-get="/static_operators">Отменить</button>
+            </p>
           </form>
+          {{end}}
     </body>
 </html>

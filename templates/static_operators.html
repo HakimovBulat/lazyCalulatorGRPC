@@ -24,18 +24,20 @@
                   </ul>
                 </header>
               </div>
-            <h4>Время выполнения в секундах</h4>
-            <div> <label>Сложение: </label> <br> <label>{{.addition}}</label> </div> 
+            {{if eq .User ""}}
+              <h2 class="col-lg-6 mx-auto mb-4"> Необходимо зарегистрироваться для ввода и просмотра данных</p>
+            {{else}}
+            <h1 class="col-lg-6 mx-auto mb-4">Время выполнения в секундах</h4>
+            <div> <p class="col-lg-6 mx-auto mb-4"> <label>Сложение: </label> </p> <p class="col-lg-6 mx-auto mb-4"> <label>{{.addition}}</label> </p> </div> 
             <br><br>
-            <div> <label>Умножение:</label> <br> <label>{{.multiplication}}</label> </div>
+            <div> <p class="col-lg-6 mx-auto mb-4"> <label>Умножение: </label> </p> <p class="col-lg-6 mx-auto mb-4"> <label>{{.multiplication}}</label>  </p> </div>
             <br><br>
-            <div> <label>Вычитание:</label> <br> <label>{{.substraction}}</label> </div> 
+            <div> <p class="col-lg-6 mx-auto mb-4"> <label>Вычитание: </label> </p> <p class="col-lg-6 mx-auto mb-4"> <label></label>{{.substraction}}</label>  </p> </div> 
             <br><br>
-            <div> <label>Деление:</label> <br> <label>{{.division}}</label> </div>
+            <div> <p class="col-lg-6 mx-auto mb-4"> <label>Деление: </label> </p> <p class="col-lg-6 mx-auto mb-4"> <label></label>{{.division}}</label> </p>  </div>
             <br><br>
-            <button hx-get="/operators" class="btn btn-primary">
-                Редактировать
-                </button>
+            <p class="col-lg-6 mx-auto mb-4"><button hx-get="/operators" class="btn btn-primary">Редактировать</button> </p>
           </form>
+          {{end}}
     </body>
 </html>

@@ -25,37 +25,41 @@
         <form action="/" method="POST">
             <div>
                 <h1 class="col-lg-6 mx-auto mb-4">Математическое выражение: </h1> <br>
-                <p class="col-lg-6 mx-auto mb-4"> <input name="math" type="text"> </p>
+                <p class="col-lg-6 mx-auto mb-4"> <input name="math" type="text" placeholder="Введите и нажмите Enter" size="60"> </p>
             </div>
         </form>
         {{range .Expressions}}
         {{if eq .Status "cancel"}}
             <div class="alert alert-danger" role="alert">
-                Id = {{.Id}}.<br> 
-                {{.StringVersion}} (неверное выражение) <br>
-                Начало работы: {{.StartDate}} <br>
-                Конец работы: {{.EndDate}}
+                <p class="col-lg-6 mx-auto mb-4"> Id = {{.Id}}.</p>
+                <p class="col-lg-6 mx-auto mb-4"> {{.StringVersion}} (неверное выражение) </p>
+                <p class="col-lg-6 mx-auto mb-4"> Начало работы: {{.StartDate}} </p>
+                <p class="col-lg-6 mx-auto mb-4"> Конец работы: {{.EndDate}}
             </div>
         {{end}}
         {{if eq .Status "ok"}}    
+        
             <div class="alert alert-success" role="alert">
-                Id = {{.Id}}.<br>
-                {{.StringVersion}} = {{.Answer}} <br>
-                Начало работы: {{.StartDate}} <br>
-                Конец работы: {{.EndDate}}
+                <p class="col-lg-6 mx-auto mb-4"> Id = {{.Id}}. </p>
+                <p class="col-lg-6 mx-auto mb-4"> {{.StringVersion}} = {{.Answer}} </p>
+                <p class="col-lg-6 mx-auto mb-4"> Начало работы: {{.StartDate}} </p>
+                <p class="col-lg-6 mx-auto mb-4"> Конец работы: {{.EndDate}}
                 </div>
         {{end}}
         {{if eq .Status "process"}}
             <div class="alert alert-primary" role="alert">
-                Id = {{.Id}}. <br> 
-                {{.StringVersion}} (обрабатывается) <br>
-                Начало работы: {{.StartDate}} <br>
-                Конец работы: {{.EndDate}}
+                <p class="col-lg-6 mx-auto mb-4"> Id = {{.Id}}. </p>
+                <p class="col-lg-6 mx-auto mb-4"> {{.StringVersion}} (обрабатывается) </p>
+                <p class="col-lg-6 mx-auto mb-4"> Начало работы: {{.StartDate}} </p>
+                <p class="col-lg-6 mx-auto mb-4"> Конец работы: {{.EndDate}}
             </div>
         {{end}}
         {{end}}
+        
         <form action="http://127.0.0.1:8080">
-            <input type="submit" value="Обновить данные">
+            <p class="col-lg-6 mx-auto mb-4">
+            <input type="submit" value="Обновить данные" class="btn btn-info">
+        </p>
         </form>
     </body>
 </html>

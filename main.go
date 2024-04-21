@@ -9,6 +9,6 @@ import (
 func main() {
 	router := router.SetupRouter()
 	if err := router.Run(":8080"); err != nil {
-		utils.Logger.Error(err.Error(), zap.String("router", "f*ck down"))
+		utils.Logger.Error(err.Error(), zap.String("router", "down"))
 	}
 }

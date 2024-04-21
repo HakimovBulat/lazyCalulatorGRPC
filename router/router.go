@@ -21,6 +21,10 @@ type Expression struct {
 	StartDate     time.Time
 	EndDate       time.Time
 }
+type User struct {
+	Name     string
+	Password string
+}
 
 var mapOperatorsTime = map[string]int{
 	"-": 10,
@@ -36,6 +40,33 @@ func SetupRouter() *gin.Engine {
 	utils.SetupLogger()
 	var err error
 	connection, err = sql.Open("postgres", connectionString)
+	//connection.Query(`DROP TABLE "Expression"`)
+	if err != nil {
+		utils.Logger.Error(err.Error())
+	}
+	_, err = connection.Query(`CREATE TABLE IF NOT EXISTS "Expression" (
+		"id" serial NOT NULL,
+		"StringVersion" text NOT NULL,
+		"Status" text NOT NULL,
+		"Answer" text NOT NULL,
+		"StartDate" TIMESTAMP WITH TIME ZONE NOT NULL,
+		"EndDate" TIMESTAMP WITH TIME ZONE NOT NULL,
+		CONSTRAINT "Expression_pk" PRIMARY KEY ("id")
+	) WITH (
+	  OIDS=FALSE
+	);`)
+	if err != nil {
+		utils.Logger.Error(err.Error())
+	}
+	_, err = connection.Query(`
+	CREATE TABLE IF NOT EXISTS "Users"(
+		"id" serial NOT NULL UNIQUE,
+		"Name" text NOT NULL,
+		"Password" text NOT NULL,
+		CONSTRAINT "Users_pk" PRIMARY KEY ("id")
+	) WITH (
+	  OIDS=FALSE
+	);`)
 	if err != nil {
 		utils.Logger.Error(err.Error())
 	}
@@ -57,9 +88,16 @@ func SetupRouter() *gin.Engine {
 }
 func logoutHandler(c *gin.Context) {
 	cookie := &http.Cookie{
-		Name:   "name",
-		MaxAge: -1}
+		Name:    "user",
+		MaxAge:  -1,
+		Value:   "",
+		Expires: time.Unix(0, 0),
+	}
 	http.SetCookie(c.Writer, cookie)
+	c.HTML(200, "index.html", gin.H{
+		"Expressions": getExpressionsList(),
+		"User":        "",
+	})
 }
 func getRegisterHandler(c *gin.Context) {
 	c.HTML(200, "register.html", nil)
@@ -69,18 +107,34 @@ func getLoginHandler(c *gin.Context) {
 }
 func postLoginHandler(c *gin.Context) {
 	login, password := c.PostForm("login"), c.PostForm("password")
-	_, err := connection.Query(`SELECT id, name, password FROM users WHERE name=$1 AND password=$2`, login, password)
+	rows, err := connection.Query(`SELECT "Name", "Password" FROM "Users" WHERE "Name"=$1 AND "Password"=$2`, login, password)
 	if err != nil {
 		utils.Logger.Error(err.Error())
+		c.HTML(http.StatusOK, "error.html", gin.H{"Error": "Пользователя не существует"})
+	}
+	users := []User{}
+	for rows.Next() {
+		user := new(User)
+		rows.Scan(
+			&user.Name,
+			&user.Password,
+		)
+		users = append(users, *user)
+		rows.Close()
+	}
+	if len(users) != 1 {
+		c.HTML(http.StatusOK, "error.html", gin.H{"Error": "Пользователя не существует"})
 	}
 	cookie := &http.Cookie{Name: "user", Value: login, MaxAge: 300}
 	http.SetCookie(c.Writer, cookie)
+	http.Redirect(c.Writer, c.Request, "/", http.StatusFound)
+
 }
 func postRegisterHandler(c *gin.Context) {
 	login, password := c.PostForm("login"), c.PostForm("password")
 	_, err := connection.Query(`
 	CREATE TABLE IF NOT EXISTS "Users"(
-		"id" serial NOT NULL UNIQUE,
+		"id" serial NOT NULL,
 		"Name" text NOT NULL,
 		"Password" text NOT NULL,
 		CONSTRAINT "Users_pk" PRIMARY KEY ("id")
@@ -90,41 +144,78 @@ func postRegisterHandler(c *gin.Context) {
 	if err != nil {
 		utils.Logger.Error(err.Error())
 	}
-	_, err = connection.Query(`INSERT INTO users (name, password) values ($1, $2)`, login, password)
+	rows, err := connection.Query(`SELECT "Name", "Password" FROM "Users" WHERE "Name"=$1`, login)
 	if err != nil {
 		utils.Logger.Error(err.Error())
 	}
-	cookie := &http.Cookie{Name: "user", Value: login, MaxAge: 300}
-	http.SetCookie(c.Writer, cookie)
-	c.HTML(200, "index.html", gin.H{
-		"Expressions": getExpressionsList(),
-		"User":        cookie.Value,
-	})
+	users := []User{}
+	for rows.Next() {
+		user := new(User)
+		rows.Scan(&user.Name, &user.Password)
+		users = append(users, *user)
+		rows.Close()
+	}
+	if len(users) > 0 {
+		c.HTML(http.StatusOK, "error.html", gin.H{"Error": "Пользователь с таким логином уже существует"})
+	} else {
+		_, err = connection.Query(`INSERT INTO "Users" ("Name", "Password") values ($1, $2)`, login, password)
+		if err != nil {
+			utils.Logger.Error(err.Error())
+		}
+		cookie := &http.Cookie{Name: "user", Value: login, MaxAge: 300}
+		http.SetCookie(c.Writer, cookie)
+		http.Redirect(c.Writer, c.Request, "/login", http.StatusFound)
+	}
 }
 
 func inputExpression(c *gin.Context) {
+
 	var err error
-	_, err = connection.Query(`CREATE TABLE IF NOT EXISTS "Expression" (
-		"id" serial NOT NULL,
-		"StringVersion" text NOT NULL,
-		"Status" text NOT NULL,
-		"Answer" text NOT NULL,
-		"StartDate" TIMESTAMP WITH TIME ZONE NOT NULL,
-		"EndDate" TIMESTAMP WITH TIME ZONE NOT NULL,
-		CONSTRAINT "Expression_pk" PRIMARY KEY ("id")
-	) WITH (
-	  OIDS=FALSE
-	);`)
-	if err != nil {
-		utils.Logger.Error(err.Error())
-	}
 	cookie, err := c.Request.Cookie("user")
 	if err != nil {
 		cookie = &http.Cookie{Name: "user", Value: "", MaxAge: 300}
 	}
 	http.SetCookie(c.Writer, cookie)
+	rows, err := connection.Query(`SELECT * FROM "Expression"`)
+	if err != nil {
+		utils.Logger.Error(err.Error())
+	}
+	defer rows.Close()
+	expressions := []Expression{}
+	for rows.Next() {
+		validExpression := new(Expression)
+		rows.Scan(
+			&validExpression.Id,
+			&validExpression.StringVersion,
+			&validExpression.Status,
+			&validExpression.Answer,
+			&validExpression.StartDate,
+			&validExpression.EndDate,
+		)
+		now := time.Now()
+		if validExpression.EndDate.Before(now) {
+			if validExpression.Answer != "not found" {
+				validExpression.Status = "ok"
+			} else {
+				validExpression.Status = "cancel"
+			}
+		}
+		_, err = connection.Query(`UPDATE "Expression" SET "StringVersion"=$2, "Status"=$3, "Answer"=$4, "StartDate"=$5, "EndDate"=$6
+			WHERE "id"=$1`,
+			validExpression.Id,
+			validExpression.StringVersion,
+			validExpression.Status,
+			validExpression.Answer,
+			validExpression.StartDate,
+			validExpression.EndDate,
+		)
+		if err != nil {
+			utils.Logger.Error(err.Error())
+		}
+		expressions = append(expressions, *validExpression)
+	}
 	c.HTML(200, "index.html", gin.H{
-		"Expressions": getExpressionsList(),
+		"Expressions": expressions,
 		"User":        cookie.Value,
 	})
 }
@@ -196,7 +287,7 @@ func createExpression(c *gin.Context) {
 	newExpression.Status = "process"
 	expressions := []Expression{}
 	if mathExpression != "" {
-		_, err := connection.Query(`INSERT INTO "Expression"("StringVersion", "Status", "Answer", "StartDate", "EndDate")
+		_, err := connection.Query(`INSERT INTO "Expression" ("StringVersion", "Status", "Answer", "StartDate", "EndDate")
 		VALUES($1, $2, $3, $4, $5)`,
 			newExpression.StringVersion,
 			newExpression.Status,
@@ -237,15 +328,26 @@ func createExpression(c *gin.Context) {
 }
 
 func showOperatorsTime(c *gin.Context) {
+	cookie, err := c.Request.Cookie("user")
+	if err != nil {
+		cookie = &http.Cookie{Name: "user", Value: "", MaxAge: 300}
+	}
+	http.SetCookie(c.Writer, cookie)
 	c.HTML(200, "operators.html", gin.H{
 		"addition":       mapOperatorsTime["+"],
 		"substraction":   mapOperatorsTime["-"],
 		"multiplication": mapOperatorsTime["*"],
 		"division":       mapOperatorsTime["/"],
+		"User":           cookie.Value,
 	})
 }
 
 func replaceOperatorsTime(c *gin.Context) {
+	cookie, err := c.Request.Cookie("user")
+	if err != nil {
+		cookie = &http.Cookie{Name: "user", Value: "", MaxAge: 300}
+	}
+	http.SetCookie(c.Writer, cookie)
 	mapOperatorsTime["+"], _ = strconv.Atoi(c.PostForm("addition"))
 	mapOperatorsTime["-"], _ = strconv.Atoi(c.PostForm("substraction"))
 	mapOperatorsTime["*"], _ = strconv.Atoi(c.PostForm("multiplication"))
@@ -255,9 +357,15 @@ func replaceOperatorsTime(c *gin.Context) {
 		"substraction":   mapOperatorsTime["-"],
 		"multiplication": mapOperatorsTime["*"],
 		"division":       mapOperatorsTime["/"],
+		"User":           cookie.Value,
 	})
 }
 func operatorsStatic(c *gin.Context) {
+	cookie, err := c.Request.Cookie("user")
+	if err != nil {
+		cookie = &http.Cookie{Name: "user", Value: "", MaxAge: 300}
+	}
+	http.SetCookie(c.Writer, cookie)
 	if c.Request.Method == "POST" {
 		mapOperatorsTime["+"], _ = strconv.Atoi(c.PostForm("addition"))
 		mapOperatorsTime["-"], _ = strconv.Atoi(c.PostForm("substraction"))
@@ -269,6 +377,7 @@ func operatorsStatic(c *gin.Context) {
 		"substraction":   mapOperatorsTime["-"],
 		"multiplication": mapOperatorsTime["*"],
 		"division":       mapOperatorsTime["/"],
+		"User":           cookie.Value,
 	})
 }
 func getExpression(c *gin.Context) {
